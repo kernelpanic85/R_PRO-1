@@ -396,6 +396,29 @@ sensor:
     id: sys_uptime_seconds
     update_interval: 60s
     internal: true
+    on_raw_value:
+      then:
+        - text_sensor.template.publish:
+            id: sys_uptime
+            state: !lambda |-
+              const uint32_t total_seconds = static_cast<uint32_t>(x);
+              const uint32_t days = total_seconds / 86400;
+              const uint32_t hours = (total_seconds % 86400) / 3600;
+              const uint32_t minutes = (total_seconds % 3600) / 60;
+              const uint32_t seconds = total_seconds % 60;
+
+              std::string uptime;
+              if (days > 0) {
+                uptime += to_string(days) + "d ";
+              }
+              if (hours > 0) {
+                uptime += to_string(hours) + "h ";
+              }
+              if (minutes > 0) {
+                uptime += to_string(minutes) + "m ";
+              }
+              uptime += to_string(seconds) + "s";
+              return uptime;
   
   - platform: scd4x
     id: scd40
@@ -779,17 +802,7 @@ text_sensor:
   - platform: template
     name: Uptime
     id: sys_uptime
-    update_interval: 60s
-    lambda: |-
-      const uint32_t total_seconds = static_cast<uint32_t>(id(sys_uptime_seconds).state);
-      const uint32_t days = total_seconds / 86400;
-      const uint32_t hours = (total_seconds % 86400) / 3600;
-      const uint32_t minutes = (total_seconds % 3600) / 60;
-      const uint32_t seconds = total_seconds % 60;
-
-      char buffer[32];
-      snprintf(buffer, sizeof(buffer), "%ud %02uh %02um %02us", days, hours, minutes, seconds);
-      return {buffer};
+    update_interval: never
 
 light:
   - platform: esp32_rmt_led_strip
